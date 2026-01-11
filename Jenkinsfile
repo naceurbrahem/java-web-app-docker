@@ -4,7 +4,7 @@ pipeline {
         DOCKERHUB_USER = 'naceurbrahem'
         DOCKERHUB_CRED_ID = 'dockerhub-login'
         SSH_CRED_ID = 'vmware-ssh-key'
-        VM_IP = '192.168.1.95'
+        VM_IP = '192.168.0.65'
         VM_USER = 'NaceurBrahem'
     }
     stages {
