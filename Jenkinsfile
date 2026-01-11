@@ -1,23 +1,22 @@
 pipeline {
     agent any
     environment {
-        DOCKERHUB_USER = 'VOTRE_PSEUDO_DOCKERHUB'
+        DOCKERHUB_USER = 'naceurbrahem'
         DOCKERHUB_CRED_ID = 'dockerhub-login'
         SSH_CRED_ID = 'vmware-ssh-key'
         VM_IP = '192.168.1.95'
         VM_USER = 'NaceurBrahem'
     }
     stages {
-        stage('Nettoyage') {
+        stage('Checkout') {
             steps {
-                deleteDir()
                 checkout scm
             }
         }
-        stage('Build JAR') {
+        stage('Build WAR (Maven)') {
             steps {
-                sh 'chmod +x gradlew'
-                sh './gradlew build'
+                // On utilise mvn package au lieu de gradlew
+                sh 'mvn clean package'
             }
         }
         stage('Docker Build & Push') {
@@ -31,10 +30,10 @@ pipeline {
                 }
             }
         }
-        stage('Déploiement SSH') {
+        stage('Deploy to VMware') {
             steps {
                 sshagent(credentials: [SSH_CRED_ID]) {
-                    sh "ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} 'docker pull ${DOCKERHUB_USER}/java-app:latest && docker stop app-java || true && docker rm app-java || true && docker run -d --name app-java -p 8080:8080 ${DOCKERHUB_USER}/java-app:latest'"
+                    sh "ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} 'docker pull ${DOCKERHUB_USER}/java-app:latest && docker stop my-app || true && docker rm my-app || true && docker run -d --name my-app -p 8081:8080 ${DOCKERHUB_USER}/java-app:latest'"
                 }
             }
         }
