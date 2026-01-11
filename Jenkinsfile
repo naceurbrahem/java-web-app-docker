@@ -1,40 +1,42 @@
-node{
-     
-    stage('SCM Checkout'){
-        git url: 'https://github.com/MithunTechnologiesDevOps/java-web-app-docker.git',branch: 'master'
+pipeline {
+    agent any
+    environment {
+        DOCKERHUB_USER = 'VOTRE_PSEUDO_DOCKERHUB'
+        DOCKERHUB_CRED_ID = 'dockerhub-login'
+        SSH_CRED_ID = 'vmware-ssh-key'
+        VM_IP = '192.168.1.95'
+        VM_USER = 'NaceurBrahem'
     }
-    
-    stage(" Maven Clean Package"){
-      def mavenHome =  tool name: "Maven-3.5.6", type: "maven"
-      def mavenCMD = "${mavenHome}/bin/mvn"
-      sh "${mavenCMD} clean package"
-      
-    } 
-    
-    
-    stage('Build Docker Image'){
-        sh 'docker build -t dockerhandson/java-web-app .'
-    }
-    
-    stage('Push Docker Image'){
-        withCredentials([string(credentialsId: 'Docker_Hub_Pwd', variable: 'Docker_Hub_Pwd')]) {
-          sh "docker login -u dockerhandson -p ${Docker_Hub_Pwd}"
+    stages {
+        stage('Nettoyage') {
+            steps {
+                deleteDir()
+                checkout scm
+            }
         }
-        sh 'docker push dockerhandson/java-web-app'
-     }
-     
-      stage('Run Docker Image In Dev Server'){
-        
-        def dockerRun = ' docker run  -d -p 8080:8080 --name java-web-app dockerhandson/java-web-app'
-         
-         sshagent(['DOCKER_SERVER']) {
-          sh 'ssh -o StrictHostKeyChecking=no ubuntu@172.31.20.72 docker stop java-web-app || true'
-          sh 'ssh  ubuntu@172.31.20.72 docker rm java-web-app || true'
-          sh 'ssh  ubuntu@172.31.20.72 docker rmi -f  $(docker images -q) || true'
-          sh "ssh  ubuntu@172.31.20.72 ${dockerRun}"
-       }
-       
+        stage('Build JAR') {
+            steps {
+                sh 'chmod +x gradlew'
+                sh './gradlew build'
+            }
+        }
+        stage('Docker Build & Push') {
+            steps {
+                script {
+                    sh "docker build -t ${DOCKERHUB_USER}/java-app:latest ."
+                    withCredentials([usernamePassword(credentialsId: DOCKERHUB_CRED_ID, passwordVariable: 'PASS', usernameVariable: 'USER')]) {
+                        sh "echo \$PASS | docker login -u \$USER --password-stdin"
+                        sh "docker push ${DOCKERHUB_USER}/java-app:latest"
+                    }
+                }
+            }
+        }
+        stage('Déploiement SSH') {
+            steps {
+                sshagent(credentials: [SSH_CRED_ID]) {
+                    sh "ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} 'docker pull ${DOCKERHUB_USER}/java-app:latest && docker stop app-java || true && docker rm app-java || true && docker run -d --name app-java -p 8080:8080 ${DOCKERHUB_USER}/java-app:latest'"
+                }
+            }
+        }
     }
-     
-     
 }
