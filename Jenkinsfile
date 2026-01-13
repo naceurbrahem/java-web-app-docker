@@ -3,7 +3,8 @@ pipeline {
     environment {
         DOCKERHUB_USER = 'naceurbrahem'
         DOCKERHUB_CRED_ID = 'dockerhub-login' 
-        SSH_CRED_ID = 'vmware-ssh-key' 
+        // Cet ID doit correspondre EXACTEMENT à celui créé dans l'interface Jenkins
+        SSH_CRED_ID = 'NaceurBrahem' 
         VM_IP = '192.168.0.65'
         VM_USER = 'NaceurBrahem'
     }
@@ -31,8 +32,8 @@ pipeline {
         }
         stage('Deploy to VMware') {
             steps {
-                // Remplacez 'NaceurBrahem' par l'ID exact que vous voyez dans Jenkins
-                sshagent(['NaceurBrahem']) { 
+                // Utilisation de la variable SSH_CRED_ID définie en haut
+                sshagent(["${SSH_CRED_ID}"]) { 
                     sh """
                         ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} "
                             docker stop my-app || true
@@ -47,10 +48,10 @@ pipeline {
     }
     post {
         success {
-            echo 'Déploiement réussi sur VMware !'
+            echo 'Félicitations ! Déploiement réussi sur VMware.'
         }
         failure {
-            echo 'Le pipeline a échoué. Vérifiez les logs.'
+            echo 'Le pipeline a échoué. Vérifiez que la clé privée dans Jenkins est correcte.'
         }
     }
 }
