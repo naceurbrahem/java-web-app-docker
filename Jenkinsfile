@@ -2,8 +2,8 @@ pipeline {
     agent any
     environment {
         DOCKERHUB_USER = 'naceurbrahem'
-        DOCKERHUB_CRED_ID = 'dockerhub-login' // Vérifiez que cet ID existe dans Jenkins
-        SSH_CRED_ID = 'vmware-ssh-key'
+        DOCKERHUB_CRED_ID = 'dockerhub-login' 
+        SSH_CRED_ID = 'NaceurBrahem' // Doit correspondre à l'ID dans Jenkins
         VM_IP = '192.168.0.65'
         VM_USER = 'NaceurBrahem'
     }
@@ -23,7 +23,6 @@ pipeline {
                 script {
                     sh "docker build -t ${DOCKERHUB_USER}/java-app:latest ."
                     withCredentials([usernamePassword(credentialsId: DOCKERHUB_CRED_ID, passwordVariable: 'PASS', usernameVariable: 'USER')]) {
-                        // Utilisation de doubles quotes pour permettre l'expansion de $PASS
                         sh "echo ${PASS} | docker login -u ${USER} --password-stdin"
                         sh "docker push ${DOCKERHUB_USER}/java-app:latest"
                     }
@@ -31,18 +30,27 @@ pipeline {
             }
         }
         stage('Deploy to VMware') {
-    steps {
-        sshagent(['NaceurBrahem']) {
-            sh '''
-                ssh -o StrictHostKeyChecking=no NaceurBrahem@192.168.0.65 "
-                    docker stop my-app || true
-                    docker rm my-app || true
-                    docker pull naceurbrahem/java-app:latest
-                    docker run -d --name my-app -p 8081:8080 naceurbrahem/java-app:latest
-                "
-            '''
+            steps {
+                sshagent([SSH_CRED_ID]) {
+                    // Utilisation de triple quotes pour un bloc propre sans erreur de syntaxe
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} "
+                            docker stop my-app || true
+                            docker rm my-app || true
+                            docker pull ${DOCKERHUB_USER}/java-app:latest
+                            docker run -d --name my-app -p 8081:8080 ${DOCKERHUB_USER}/java-app:latest
+                        "
+                    """
+                }
+            }
         }
     }
-}
+    post {
+        success {
+            echo 'Déploiement réussi sur VMware !'
+        }
+        failure {
+            echo 'Le pipeline a échoué. Vérifiez les logs.'
+        }
     }
 }
