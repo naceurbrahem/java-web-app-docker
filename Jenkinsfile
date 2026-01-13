@@ -31,13 +31,13 @@ pipeline {
         }
         stage('Deploy to VMware') {
             steps {
-                sshagent([SSH_CRED_ID]) {
-                    // Utilisation de triple double-quotes pour gérer proprement les commandes SSH imbriquées
+                // Remplacez 'NaceurBrahem' par l'ID exact que vous voyez dans Jenkins
+                sshagent(['NaceurBrahem']) { 
                     sh """
                         ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} "
-                            docker stop my-app || true && \
-                            docker rm my-app || true && \
-                            docker pull ${DOCKERHUB_USER}/java-app:latest && \
+                            docker stop my-app || true
+                            docker rm my-app || true
+                            docker pull ${DOCKERHUB_USER}/java-app:latest
                             docker run -d --name my-app -p 8081:8080 ${DOCKERHUB_USER}/java-app:latest
                         "
                     """
