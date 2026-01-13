@@ -31,28 +31,18 @@ pipeline {
             }
         }
         stage('Deploy to VMware') {
-            steps {
-                sshagent([SSH_CRED_ID]) {
-                    // Utilisation des variables définies dans environment
-                    sh """
-                        ssh -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} '
-                            # 1. Arrêter les anciens conteneurs s'ils existent
-                            docker stop my-app || true
-                            docker rm my-app || true
-                            
-                            # 2. Télécharger la nouvelle image depuis DockerHub
-                            docker pull ${DOCKERHUB_USER}/java-app:latest
-                            
-                            # 3. Lancer le nouveau conteneur
-                            docker run -d --name my-app -p 8081:8080 ${DOCKERHUB_USER}/java-app:latest
-                            
-                            # 4. Vérifier que les conteneurs sont bien démarrés
-                            echo "Vérification du déploiement :"
-                            docker ps | grep my-app
-                        '
-                    """
-                }
-            }
+    steps {
+        sshagent(['NaceurBrahem']) {
+            sh '''
+                ssh -o StrictHostKeyChecking=no NaceurBrahem@192.168.0.65 "
+                    docker stop my-app || true
+                    docker rm my-app || true
+                    docker pull naceurbrahem/java-app:latest
+                    docker run -d --name my-app -p 8081:8080 naceurbrahem/java-app:latest
+                "
+            '''
         }
+    }
+}
     }
 }
